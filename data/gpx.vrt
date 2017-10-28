@@ -1,0 +1,14 @@
+<OGRVRTDataSource>
+    <OGRVRTLayer name="waypoints">
+        <SrcDataSource>route_segment.wpt.geojson</SrcDataSource> 
+        <SrcLayer>waypoints</SrcLayer> 
+        <GeometryType>wkbPoint</GeometryType> 
+        <LayerSRS>WGS84</LayerSRS>
+    </OGRVRTLayer>
+    <OGRVRTLayer name="routes">
+        <SrcDataSource>route_segment.rte.geojson</SrcDataSource> 
+        <SrcLayer>routes</SrcLayer> 
+        <GeometryType>wkbLineString</GeometryType> 
+        <LayerSRS>WGS84</LayerSRS>
+    </OGRVRTLayer>
+</OGRVRTDataSource>

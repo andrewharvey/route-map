@@ -1,0 +1,14 @@
+{
+  "name": "route-map",
+  "version": "1.0.0",
+  "description": "Tool to aid creating walking, running, cycle route maps.",
+  "main": "index.js",
+  "repository": "https://github.com/andrewharvey/route-map/",
+  "author": "Andrew Harvey <andrew.harvey4@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@turf/helpers": "^5.0.1",
+    "@turf/meta": "^5.0.2",
+    "lodash": "^4.17.4"
+  }
+}
