@@ -7,7 +7,7 @@ Create your route in JOSM ([sample](data/willoughby-park-run.osm)) or any other 
 
 Each segment of the route should be one way/feature. Each segment should have a tag/property of key `segment` and value should be a comma seperated list of the segment number. For example in the route shown below each color is one segment. The red one has `segment=8,-9` which means this way/feature makes up segment 8 of the route and segment 9 of the route in the reverse direction.
 
-[!data/willoughby-park-run.png]
+<img alt="Map of Willoughby Park Run Route" src="data/willoughby-park-run.png">
 
 If you created your route in JOSM save it as a .osm file and convert it to a GeoJSON with:
 
