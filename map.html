@@ -276,7 +276,7 @@ $.getJSON(config.course.route, function (geojson) {
         axes: {
             x: {
                 axisLabelFormatter: function(x) {
-                    return numeral(x).format('0,0 a') + 'm';
+                    return numeral(x).format('0,0.0 a') + 'm';
                 },
                 valueFormatter: function(x) {
                     return numeral(x).format('0,0.0 a') + 'm';
