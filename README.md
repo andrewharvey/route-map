@@ -2,6 +2,8 @@
 
 route-map is a simple tool helping you create maps for a walking, running, cycling route particularly where the route doubles back on itself. The key is that the route definition contains each segment mapped once. So a route which goes from A to B then back to A along the same way (eg. a return journey) only has one line from A to B in your source route definition. This aims to retain the topology of the route.
 
+See the demo at [https://andrewharvey.github.io/route-map/map.html](https://andrewharvey.github.io/route-map/map.html).
+
 ## Create Source Route
 Create your route in JOSM ([sample](data/willoughby-park-run.osm)) or any other tool as a GeoJSON ([sample](data/willoughby-park-run.geojson)).
 
