@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset='utf-8' />
+        <title></title>
+        <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+        <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.41.0/mapbox-gl.js'></script>
+        <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.41.0/mapbox-gl.css' rel='stylesheet' />
+        <script src='https://unpkg.com/cheap-ruler@2.5.0/cheap-ruler.js'></script>
+        <script src='https://unpkg.com/dygraphs@2.0.0/dist/dygraph.min.js'></script>
+        <link href='https://unpkg.com/dygraphs@2.0.0/dist/dygraph.min.css' rel='stylesheet' />
+        <script src='https://unpkg.com/jquery@3.2.1/dist/jquery.min.js'></script>
+        <script src='https://unpkg.com/numeral@2.0.6/min/numeral.min.js'></script>
+        <style>
+            body { margin:0; padding:0; }
+            #map { position:absolute; top:0; bottom:0; width:100%; }
+            #profile {
+                position:absolute;
+                height:25%;
+                bottom:0px;
+                width:100%;
+                background: rgba(255,255,255,0.8);
+                overflow: hidden;
+
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                -khtml-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+            .dygraph-legend {
+                background: none;
+                left: initial !important;
+                right: 5px;
+                width: initial;
+            }
+            .mapboxgl-ctrl-bottom-left,
+            .mapboxgl-ctrl-bottom-right {
+                bottom: 25%;
+            }
+        </style>
+    </head>
+    <body>
+        <div id='map'></div>
+        <div id='profile'></div>
+        <script>
+// Object.keys polyfill
+if (!Object.keys) Object.keys = function(o) {
+    if (o !== Object(o))
+        throw new TypeError('Object.keys called on a non-object');
+    var k=[],p;
+    for (p in o) if (Object.prototype.hasOwnProperty.call(o,p)) k.push(p);
+    return k;
+}
+
+var config = {
+    accessToken: 'pk.eyJ1IjoiYW5kcmV3aGFydmV5NCIsImEiOiJQUGlGbmRRIn0.QXGAIfNhyVBmLvz0BwAhRg',
+    center: [151.1988, -33.8127],
+    zoom: 15,
+    paddingHorizontal: 75,
+    paddingVertical: 50
+};
+
+config.course = {
+    style: 'andrewharvey4/cj9mbepoa29bv2rnzq0z60wxv?fresh=true',
+    bounds: [[151.191699, -33.814054], [151.206068, -33.807989]],
+    route: 'data/willoughby-park-run_route.geojson',
+    dataset: 'data/willoughby-park-run_segment_dataset.geojson',
+    color: '#0000ff'
+};
+
+mapboxgl.accessToken = config.accessToken;
+
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/' + config.course.style,
+    center: config.center,
+    zoom: config.zoom
+});
+
+map.fitBounds(config.course.bounds, {
+    padding: {
+        top: config.paddingVertical,
+        bottom: document.getElementById('profile').offsetHeight / 2 + config.paddingVertical + 20,
+        left: config.paddingHorizontal,
+        right: config.paddingHorizontal
+    },
+    linear: true,
+    duration: 0
+});
+
+var ruler = cheapRuler(config.center[1], 'meters');
+
+map.addControl(new mapboxgl.NavigationControl());
+
+var popup = new mapboxgl.Popup({
+    closeButton: false,
+    closeOnClick: false,
+    offset: 20
+});
+
+
+var routeMarkerSource;
+map.on('load', function(e) {
+    // create a local hover source to store the route marker feature
+    map.addSource('route-marker', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+    });
+    routeMarkerSource = map.getSource('route-marker');
+
+    // get the styling of the route-marker from the Studio style
+    map.getStyle().layers.forEach(function (layer) {
+        if (layer.id == 'route-marker' ||
+            layer.id == 'route-marker-shadow') {
+            // remove the layer from the Studio style
+            map.removeLayer(layer.id);
+
+            // replace the layer source from Studio to the local hover source
+            delete layer['source-layer'];
+            delete layer.metadata;
+            delete layer.filter;
+            layer.layout.visibility = 'visible';
+            layer.source = 'route-marker';
+
+            // add the new layer with the local hover source back to the map
+            map.addLayer(layer);
+        }
+    });
+
+    map.on('mouseenter', 'station', function (e) {
+        popup.setLngLat(e.features[0].geometry.coordinates)
+            .setHTML('Marshal Point')
+            .addTo(map);
+    });
+    map.on('mouseleave', 'station', function (e) {
+        popup.remove();
+    });
+
+    // when the mouse is hovered around the route line
+    map.on('mousemove', 'route-mouseover', function (e) {
+        map.getCanvasContainer().style.cursor = 'crosshair';
+
+        // find the closest point on the route line to the cursor
+        var closestPoint;
+        var closestPointFeature;
+        e.features.forEach(function (feature) {
+            var lines;
+            if (feature.geometry.type === 'MultiLineString') {
+                lines = feature.geometry.coordinates;
+            } else if (feature.geometry.type === 'LineString') {
+                lines = [feature.geometry.coordinates];
+            }
+            if (lines) {
+                lines.forEach(function (line) {
+                    var snappedPoint = ruler.pointOnLine(line, e.lngLat.toArray()).point;
+                    if (!closestPoint) {
+                        closestPoint = snappedPoint;
+                        closestPointFeature = feature;
+                    } else {
+                        if (ruler.distance(e.lngLat.toArray(), snappedPoint) < ruler.distance(e.lngLat.toArray(), closestPoint)) {
+                            closestPoint = snappedPoint;
+                            closestPointFeature = feature;
+                        }
+                    }
+                });
+            }
+        });
+
+        if (closestPoint) {
+            // set the route marker location to the closet point on the route line
+            routeMarkerSource.setData({ type: 'Point', coordinates: closestPoint});
+
+            // add an annotation to the elevation profile at the location(s) of this point on the route
+            if (routeCoordinates && elevationGraph) {
+                var segments = closestPointFeature.properties.segment.split(',').map(function (segment) { return Number(segment); });
+                elevationGraph.setAnnotations(segments.map(function (segment) {
+                    // how far along this segment are we
+                    var distanceAlong = ruler.lineDistance(
+                        ruler.lineSlice(
+                            routeSegments[Math.abs(segment)].coordinates[0],
+                            closestPoint,
+                            routeSegments[Math.abs(segment)].coordinates
+                        )
+                    );
+
+                    // aggregate distance from all previous segments and add to distance along this segment
+                    for (var i = 0; i < Math.abs(segment); i++) {
+                        if ( i in routeSegments) {
+                            distanceAlong += routeSegments[i].distance;
+                        }
+                    }
+
+                    // set annotations on the graph
+                    var x = closest(distanceAlong, profile.map(function (xy) { return xy[0]; }));
+                    return {
+                        series: 'Elevation',
+                        icon: 'marker.png',
+                        width: 17,
+                        height: 17,
+                        tickHeight: -8.5,
+                        x: x,
+                        shortText: 'x'
+                    };
+                }));
+            }
+        } else {
+            clearRouteMarker();
+        }
+    });
+    map.on('mouseleave', 'route-mouseover', clearRouteMarker);
+});
+
+function clearRouteMarker() {
+    map.getCanvasContainer().style.cursor = null;
+    if (routeMarkerSource) {
+        routeMarkerSource.setData({ type: 'FeatureCollection', features: [] });
+    }
+    elevationGraph.setAnnotations([]);
+}
+
+// closest value to num within arr (x value in set annotation must be exactly one of the graph's x values
+function closest(num, arr) {
+    var curr = arr[0];
+    var diff = Math.abs (num - curr);
+    for (var val = 0; val < arr.length; val++) {
+        var newdiff = Math.abs (num - arr[val]);
+        if (newdiff < diff) {
+            diff = newdiff;
+            curr = arr[val];
+        }
+    }
+    return curr;
+}
+
+var routeSegments = {};
+$.getJSON(config.course.dataset, function (geojson) {
+    geojson.features.forEach(function (feature) {
+        if ('segment' in feature.properties) {
+            var segments = feature.properties.segment.split(',').map(function (segment) { return Number(segment); });
+            segments.forEach(function (segment) {
+                var reversedCoordinates = feature.geometry.coordinates.slice();
+                reversedCoordinates.reverse();
+                routeSegments[Math.abs(segment)] = {
+                    coordinates: (segment >= 0) ? feature.geometry.coordinates : reversedCoordinates,
+                };
+                routeSegments[Math.abs(segment)].distance = ruler.lineDistance(routeSegments[Math.abs(segment)].coordinates);
+            });
+        }
+    });
+});
+
+var routeCoordinates;
+var elevationGraph;
+var profile = [];
+$.getJSON(config.course.route, function (geojson) {
+    var profileToLocation = {};
+    routeCoordinates = geojson.features[0].geometry.coordinates;
+    var dx = 0;
+    for (var i = 0; i < routeCoordinates.length; i++) {
+        var cur = routeCoordinates[i];
+        if (i > 0) {
+            var prev = routeCoordinates[i - 1];
+            var dist = ruler.distance([prev[0], prev[1]], [cur[0], cur[1]])
+            dx += dist;
+        }
+        profile.push([Math.floor(dx), Math.max(cur[2] || 0, 0)]);
+        profileToLocation[Math.floor(dx)] = cur;
+    }
+    elevationGraph = new Dygraph(document.getElementById('profile'), profile, {
+        colors: [config.course.color],
+        labels: ['Distance', 'Elevation'],
+        interactionModel: {},
+        fillGraph: true,
+        axes: {
+            x: {
+                axisLabelFormatter: function(x) {
+                    return numeral(x).format('0,0 a') + 'm';
+                },
+                valueFormatter: function(x) {
+                    return numeral(x).format('0,0.0 a') + 'm';
+                }
+            },
+            y: {
+                axisLabelFormatter: function(y) {
+                    return numeral(y).format('0,0') + 'm';
+                },
+                valueFormatter: function(x) {
+                    return numeral(x).format('0,0') + 'm';
+                }
+            }
+        },
+        rollPeriod: 10,
+        highlightCallback: function(e, x, points, row, seriesName) {
+            if (routeMarkerSource) {
+                routeMarkerSource.setData({ type: 'Point', coordinates: profileToLocation[x]});
+            }
+        },
+        unhighlightCallback: clearRouteMarker
+    });
+});
+        </script>
+    </body>
+</html>
