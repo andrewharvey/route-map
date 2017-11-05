@@ -69,3 +69,9 @@ You can add an elevation to your `route_segment.gpx` from SRTM1 or another sourc
 
     # export back to GeoJSON
     ogr2ogr -f GeoJSON -lco COORDINATE_PRECISION=6 -t_srs 'EPSG:4326' -s_srs 'EPSG:28356' routez.geojson PG: routez
+
+## Produce a Dataset
+
+The dataset contains the segment numbers and forward/backward hints to draw arrows.
+
+    > ./segments2dataset.js route.geojson .
