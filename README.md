@@ -45,6 +45,7 @@ You can add an elevation to your `route_segment.gpx` from SRTM1 or another sourc
     raster2pgsql -d -C -I -M -t auto -s 28356 route_28356.tiff dem | psql --quiet
 
     # also load the route into PostgreSQL
+    psql -c "DROP TABLE route;"
     ogr2ogr -f "PostgreSQL" -nln route PG:"dbname=" route_28356.geojson 
 
     # determine the pixel size of the DEM
