@@ -35,8 +35,8 @@ To produce a GPX file:
 
 You can add an elevation to your `route_segment.gpx` from SRTM1 or another source. The following instructions based on a mosaic for NSW, Australia.
 
-    # convert the route into the same projection as the DEM
-    ogr2ogr -f 'GeoJSON' -t_srs 'EPSG:28356' route_28356.geojson route_segment.geojson
+    # convert the route into the same projection as the DEM and only take the LineString geometry
+    ogr2ogr -f 'GeoJSON' -t_srs 'EPSG:28356' -where "OGR_GEOMETRY='LineString'" route_28356.geojson route_segment.geojson
 
     # trim the DEM to only cover the extent of the route
     ./trimDem.sh route_28356.geojson nswdemz56.tif
